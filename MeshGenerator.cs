@@ -313,48 +313,7 @@ public class MeshGenerator : MonoBehaviour
             return vertexIndex == vertexIndexA || vertexIndex == vertexIndexB || vertexIndex == vertexIndexC;
         }
     }
-
-    void CreateVisualSquareGrid()
-    {
-        if (squareGrid == null) return;
-
-        for (int x = 0; x < squareGrid.squares.GetLength(0); x++)
-        {
-            for (int y = 0; y < squareGrid.squares.GetLength(1); y++)
-            {
-                CreateSquareVisual(squareGrid.squares[x, y].topLeft.position, squareGrid.squares[x, y].topLeft.active);
-                CreateSquareVisual(squareGrid.squares[x, y].topRight.position, squareGrid.squares[x, y].topRight.active);
-                CreateSquareVisual(squareGrid.squares[x, y].bottomRight.position, squareGrid.squares[x, y].bottomRight.active);
-                CreateSquareVisual(squareGrid.squares[x, y].bottomLeft.position, squareGrid.squares[x, y].bottomLeft.active);
-
-                CreateConnectorVisual(squareGrid.squares[x, y].centerTop.position);
-                CreateConnectorVisual(squareGrid.squares[x, y].centerRight.position);
-                CreateConnectorVisual(squareGrid.squares[x, y].centerBottom.position);
-                CreateConnectorVisual(squareGrid.squares[x, y].centerLeft.position);
-            }
-        }
-    }
-
-    void CreateSquareVisual(Vector3 position, int activeState)
-    {
-        GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        obj.transform.position = position;
-        obj.transform.localScale = Vector3.one * 0.4f;
-        obj.GetComponent<Renderer>().material.color = activeState == 1 ? Color.green :
-            activeState == 2 ? Color.red : Color.white;
-        obj.transform.parent = this.transform; // Keep hierarchy clean
-    }
-
-    void CreateConnectorVisual(Vector3 position)
-    {
-        GameObject connector = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        connector.transform.position = position;
-        connector.transform.localScale = Vector3.one * 0.15f;
-        connector.GetComponent<Renderer>().material.color = Color.grey;
-        connector.transform.parent = this.transform; // Keep hierarchy clean
-    }
-
-
+    
 
     public class SquareGrid
     {

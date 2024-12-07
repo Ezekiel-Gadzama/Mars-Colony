@@ -2,6 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Data;
+using System.Linq;
+using UnityEngine.Tilemaps;
+
 public class MapGenerator : MonoBehaviour
 {
     public int width;
@@ -26,11 +30,9 @@ public class MapGenerator : MonoBehaviour
         {
             SmoothMap();
         }
-        for (int i = 0; i < 3; i++)
-        {
-            RemoveUnnecessaryPoints(); // Remove isolated points
-        }
 
+        ProcessMap();
+        
         /////////////////// Generating map border ///////////////////
         int borderSize = 1;
         int[,] borderedMap = new int[width + borderSize * 2, height + borderSize * 2];
@@ -48,11 +50,106 @@ public class MapGenerator : MonoBehaviour
                 }
             }
         }
-
+        
         MeshGenerator meshGen = GetComponent<MeshGenerator>();
         meshGen.GenerateMesh(borderedMap,1);
         
         // CreateVisualMap();
+    }
+
+    void ProcessMap()
+    {
+        List<List<Coord>> wallRegions = GetRegions(1);
+        wallRegions.AddRange(GetRegions(2));
+        int wallThresholdSize = 30;
+        foreach (List<Coord> wallRegion in wallRegions)
+        {
+            if (wallRegion.Count < wallThresholdSize)
+            {
+                foreach (Coord tile in wallRegion)
+                {
+                    map[tile.tileX, tile.tileY] = 0;
+                }
+            }
+        }
+        
+        List<List<Coord>> roomRegions = GetRegions(0);
+        int roomThresholdSize = 5;
+        foreach (List<Coord> roomRegion in roomRegions)
+        {
+            if (roomRegion.Count < roomThresholdSize)
+            {
+                foreach (Coord tile in roomRegion)
+                {
+                    map[tile.tileX, tile.tileY] = map[tile.tileX + 1, tile.tileY];
+                }
+            }
+        }
+        
+        
+    }
+
+    List<List<Coord>> GetRegions(int tileType)
+    {
+        List<List<Coord>> regions = new List<List<Coord>>();
+        int[,] mapFlags = new int[width,height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (mapFlags[x, y] == 0 && map[x, y] == tileType)
+                {
+                    List<Coord> newRegion = GetRegionTiles(x, y);
+                    regions.Add(newRegion);
+                    foreach (Coord tile in newRegion)
+                    {
+                        mapFlags[tile.tileX, tile.tileY] = 1;
+                    }
+                }
+            }
+        }
+
+        return regions;
+    }
+
+    List<Coord> GetRegionTiles(int startX, int startY)
+    {
+        List<Coord> tiles = new List<Coord>();
+        int[,] mapFlags = new int[width, height];
+        int tileType = map[startX, startY];
+
+        Queue<Coord> queue = new Queue<Coord>();
+        queue.Enqueue(new Coord(startX, startY));
+        mapFlags[startX, startY] = 1;
+
+        while (queue.Count > 0)
+        {
+            Coord tile = queue.Dequeue();
+            tiles.Add(tile);
+            for (int x = tile.tileX - 1; x <= tile.tileX + 1; x++)
+            {
+                for (int y = tile.tileY - 1; y <= tile.tileY + 1; y++)
+                {
+                    if (IsInMapRange(x, y) && (x == tile.tileX || y == tile.tileY))
+                    {
+                        if (mapFlags[x, y] == 0 && map[x, y] == tileType)
+                        {
+                            mapFlags[x, y] = 1;
+                            queue.Enqueue(new Coord(x, y));
+                        }
+                        
+                    }
+                }
+            }
+        }
+
+        return tiles;
+    }
+
+    bool IsInMapRange(int x, int y)
+    {
+        return x >= 0 && x < width && y >= 0 && y < height;
     }
     
 
@@ -138,7 +235,7 @@ public class MapGenerator : MonoBehaviour
         {
             for (int neighbourY = gridY - 1; neighbourY <= gridY + 1; neighbourY++)
             {
-                if (neighbourX >= 0 && neighbourX < width && neighbourY >= 0 && neighbourY < height)
+                if (IsInMapRange(neighbourX, neighbourY))
                 {
                     if (neighbourX != gridX || neighbourY != gridY)
                     {
@@ -152,107 +249,20 @@ public class MapGenerator : MonoBehaviour
         }
         return count;
     }
-    
-    void RemoveUnnecessaryPoints()
+
+    struct Coord
     {
-        int n = 3;
-        int[,] newMap = (int[,])map.Clone(); // Create a copy to store the updated map
+        public int tileX;
+        public int tileY;
 
-        for (int x = 0; x < width; x++)
+        public Coord(int x, int y)
         {
-            for (int y = 0; y < height; y++)
-            {
-                int currentColor = map[x, y];
-
-                // Skip if the current point is already white
-                if (currentColor == 0)
-                    continue;
-
-                // Check for N consecutive neighbors in each direction
-                bool hasConsecutiveNeighbors = HasNConsecutiveNeighbors(x, y, currentColor,n);
-
-                // If no N consecutive neighbors, set the point to white in the new map
-                if (!hasConsecutiveNeighbors)
-                {
-                    newMap[x, y] = 0;
-                }
-            }
+            tileX = x;
+            tileY = y;
         }
-
-        map = newMap; // Update the map with the new map
     }
-
-    bool HasNConsecutiveNeighbors(int x, int y, int color, int n)
-    {
-        // Check right (x+1 to x+N)
-        if (x + n < width)
-        {
-            bool allMatch = true;
-            for (int i = 1; i <= n; i++)
-            {
-                if (map[x + i, y] != color)
-                {
-                    allMatch = false;
-                    break;
-                }
-            }
-            if (allMatch) return true;
-        }
-
-        // Check left (x-1 to x-N)
-        if (x - n >= 0)
-        {
-            bool allMatch = true;
-            for (int i = 1; i <= n; i++)
-            {
-                if (map[x - i, y] != color)
-                {
-                    allMatch = false;
-                    break;
-                }
-            }
-            if (allMatch) return true;
-        }
-
-        // Check up (y+1 to y+N)
-        if (y + n < height)
-        {
-            bool allMatch = true;
-            for (int i = 1; i <= n; i++)
-            {
-                if (map[x, y + i] != color)
-                {
-                    allMatch = false;
-                    break;
-                }
-            }
-            if (allMatch) return true;
-        }
-
-        // Check down (y-1 to y-N)
-        if (y - n >= 0)
-        {
-            bool allMatch = true;
-            for (int i = 1; i <= n; i++)
-            {
-                if (map[x, y - i] != color)
-                {
-                    allMatch = false;
-                    break;
-                }
-            }
-            if (allMatch) return true;
-        }
-
-        // No N consecutive neighbors found
-        return false;
-    }
-
-
-
     
-
-
+    
     void CreateVisualMap()
     {
         for (int x = 0; x < width; x++)
