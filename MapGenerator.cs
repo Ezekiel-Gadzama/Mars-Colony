@@ -15,10 +15,10 @@ public class MapGenerator : MonoBehaviour
 
     void Start()
     {
-        Generator();
+        GenerateMap();
     }
 
-    void Generator()
+    void GenerateMap()
     {
         map = new int[width, height];
         RandomFillMap();
@@ -30,9 +30,31 @@ public class MapGenerator : MonoBehaviour
         {
             RemoveUnnecessaryPoints(); // Remove isolated points
         }
+
+        /////////////////// Generating map border ///////////////////
+        int borderSize = 1;
+        int[,] borderedMap = new int[width + borderSize * 2, height + borderSize * 2];
+        for (int x = 0; x < borderedMap.GetLength(0); x++)
+        {
+            for (int y = 0; y < borderedMap.GetLength(1); y++)
+            {
+                if (x >= borderSize && x < width + borderSize && y >= borderSize && y < height + borderSize)
+                {
+                    borderedMap[x, y] = map[x - borderSize, y - borderSize];
+                }
+                else
+                {
+                    borderedMap[x, y] = 1;
+                }
+            }
+        }
+
+        MeshGenerator meshGen = GetComponent<MeshGenerator>();
+        meshGen.GenerateMesh(borderedMap,1);
         
-        CreateVisualMap();
+        // CreateVisualMap();
     }
+    
 
     void RandomFillMap()
     {
@@ -242,7 +264,7 @@ public class MapGenerator : MonoBehaviour
 
                 if (map[x, y] == 1) // Residential
                 {
-                    obj = CreateBuilding(pos, Color.green, "Residential");
+                    obj = CreateBuilding(pos, Color.red, "Residential");
                 }
                 else if (map[x, y] == 2) // Industrial
                 {
