@@ -26,6 +26,10 @@ public class MapGenerator : MonoBehaviour
         {
             SmoothMap();
         }
+        for (int i = 0; i < 3; i++)
+        {
+            RemoveUnnecessaryPoints(); // Remove isolated points
+        }
         
         CreateVisualMap();
     }
@@ -126,6 +130,103 @@ public class MapGenerator : MonoBehaviour
         }
         return count;
     }
+    
+    void RemoveUnnecessaryPoints()
+    {
+        int n = 3;
+        int[,] newMap = (int[,])map.Clone(); // Create a copy to store the updated map
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                int currentColor = map[x, y];
+
+                // Skip if the current point is already white
+                if (currentColor == 0)
+                    continue;
+
+                // Check for N consecutive neighbors in each direction
+                bool hasConsecutiveNeighbors = HasNConsecutiveNeighbors(x, y, currentColor,n);
+
+                // If no N consecutive neighbors, set the point to white in the new map
+                if (!hasConsecutiveNeighbors)
+                {
+                    newMap[x, y] = 0;
+                }
+            }
+        }
+
+        map = newMap; // Update the map with the new map
+    }
+
+    bool HasNConsecutiveNeighbors(int x, int y, int color, int n)
+    {
+        // Check right (x+1 to x+N)
+        if (x + n < width)
+        {
+            bool allMatch = true;
+            for (int i = 1; i <= n; i++)
+            {
+                if (map[x + i, y] != color)
+                {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) return true;
+        }
+
+        // Check left (x-1 to x-N)
+        if (x - n >= 0)
+        {
+            bool allMatch = true;
+            for (int i = 1; i <= n; i++)
+            {
+                if (map[x - i, y] != color)
+                {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) return true;
+        }
+
+        // Check up (y+1 to y+N)
+        if (y + n < height)
+        {
+            bool allMatch = true;
+            for (int i = 1; i <= n; i++)
+            {
+                if (map[x, y + i] != color)
+                {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) return true;
+        }
+
+        // Check down (y-1 to y-N)
+        if (y - n >= 0)
+        {
+            bool allMatch = true;
+            for (int i = 1; i <= n; i++)
+            {
+                if (map[x, y - i] != color)
+                {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) return true;
+        }
+
+        // No N consecutive neighbors found
+        return false;
+    }
+
+
 
     
 
