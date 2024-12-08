@@ -120,6 +120,7 @@ public class MapGenerator : MonoBehaviour
     {
         List<Room> roomsListA = new List<Room>();
         List<Room> roomListB = new List<Room>();
+        List<Coord> path = null;
 
         if (forceAccessibilityFromMainRoom)
         {
@@ -140,49 +141,38 @@ public class MapGenerator : MonoBehaviour
             roomsListA = allRooms;
             roomListB = allRooms;
         }
-        int bestDistance = 0;
+
+        int bestDistance = int.MaxValue;
         Coord bestTileA = new Coord();
         Coord bestTileB = new Coord();
-        Room bestRoomA = new Room();
-        Room bestRoomB = new Room();
+        Room bestRoomA = null;
+        Room bestRoomB = null;
         bool possibleConnectionFound = false;
-        
+
         foreach (Room roomA in roomsListA)
         {
-            if (!forceAccessibilityFromMainRoom)
-            {
-                possibleConnectionFound = false;
-                if (roomA.connectedRooms.Count > 0)
-                {
-                    continue;
-                }
-            }
-            
+            if (!forceAccessibilityFromMainRoom && roomA.connectedRooms.Count > 0)
+                continue;
+            path = null;
             foreach (Room roomB in roomListB)
             {
                 if (roomA == roomB || roomA.IsConnected(roomB))
-                {
                     continue;
-                }
-                
-                for (int tileIndexA = 0; tileIndexA < roomA.edgeTiles.Count; tileIndexA++)
+
+                foreach (Coord tileA in roomA.edgeTiles)
                 {
-                    for (int tileIndexB = 0; tileIndexB < roomB.edgeTiles.Count; tileIndexB++)
+                    foreach (Coord tileB in roomB.edgeTiles)
                     {
-                        Coord tileA = roomA.edgeTiles[tileIndexA];
-                        Coord tileB = roomB.edgeTiles[tileIndexB];
+                        path = AStarPathfinding(tileA, tileB);
 
-                        int distanceBetweenRooms = (int) (Mathf.Pow(tileA.tileX - tileB.tileX, 2) +
-                                                   Mathf.Pow(tileA.tileY - tileB.tileY, 2));
-
-                        if (distanceBetweenRooms < bestDistance || !possibleConnectionFound)
+                        if (path != null && path.Count < bestDistance)
                         {
-                            bestDistance = distanceBetweenRooms;
-                            possibleConnectionFound = true;
+                            bestDistance = path.Count;
                             bestTileA = tileA;
                             bestTileB = tileB;
                             bestRoomA = roomA;
                             bestRoomB = roomB;
+                            possibleConnectionFound = true;
                         }
                     }
                 }
@@ -190,12 +180,13 @@ public class MapGenerator : MonoBehaviour
 
             if (possibleConnectionFound && !forceAccessibilityFromMainRoom)
             {
-                CreatePassage(bestRoomA,bestRoomB,bestTileA,bestTileB);
+                CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB,path);
             }
         }
+
         if (possibleConnectionFound && forceAccessibilityFromMainRoom)
         {
-            CreatePassage(bestRoomA,bestRoomB,bestTileA,bestTileB);
+            CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB,path);
             ConnectClosestRooms(allRooms, true);
         }
 
@@ -204,13 +195,13 @@ public class MapGenerator : MonoBehaviour
             ConnectClosestRooms(allRooms, true);
         }
     }
-
-    void CreatePassage(Room roomA, Room roomB, Coord tileA, Coord tileB)
+    
+    void CreatePassage(Room roomA, Room roomB, Coord tileA, Coord tileB,List<Coord> path)
     {
         Room.ConnectRooms(roomA, roomB);
         Debug.DrawLine(CoordToWorldPoint(tileA), CoordToWorldPoint(tileB), Color.yellow,100);
-        List<Coord> line = GetLine(tileA, tileB);
-        foreach (Coord c in line)
+        // List<Coord> line = GetLine(tileA, tileB);
+        foreach (Coord c in path)
         {
             DrawCircle(c,1);
         }
