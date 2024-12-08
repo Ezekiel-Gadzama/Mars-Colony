@@ -25,10 +25,23 @@ public class MapGenerator : MonoBehaviour
     void GenerateMap()
     {
         map = new int[width, height];
+        float[,] heightMap = new float[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                float xCoord = (float)x / width * 10.0f;
+                float yCoord = (float)y / height * 10.0f;
+
+                // Generate Perlin noise value
+                heightMap[x, y] = Mathf.PerlinNoise(xCoord, yCoord);
+            }
+        }
         RandomFillMap();
         for (int i = 0; i < 1000; i++)
         {
-            SmoothMap();
+            SmoothMap(heightMap);
         }
 
         ProcessMap();
@@ -463,7 +476,7 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    void SmoothMap()
+    void SmoothMap(float[,] heightMap)
     {
         for (int x = 0; x < width; x++)
         {
@@ -485,16 +498,31 @@ public class MapGenerator : MonoBehaviour
                     float emptyRatio = (float)emptyCount / totalNeighbors;
                     if (residentialRatio + industrialRatio > emptyRatio)
                     {
-                        // Assign type based on dominant proportion
-                        if (residentialRatio > industrialRatio)
+                        if (heightMap[x, y] > 0.3 && heightMap[x, y] < 0.7)
                         {
-                            map[x, y] = 1; // Residential
-                        }
-                        else if (industrialRatio > residentialRatio)
-                        {
-                            map[x, y] = 2; // Industrial
+                            // Assign type based on dominant proportion
+                            if (residentialRatio > industrialRatio)
+                            {
+                                map[x, y] = 1; // Residential
+                            }
+                            else if (industrialRatio > residentialRatio)
+                            {
+                                map[x, y] = 2; // Industrial
+                            }
                         }
                     }
+                }
+            }
+        }
+        
+        // Remove areas not suitable for buildings
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (heightMap[x, y] <= 0.2 && heightMap[x, y] >= 0.7)
+                {
+                    map[x, y] = 0;
                 }
             }
         }
