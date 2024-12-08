@@ -66,9 +66,59 @@ public class MapGenerator : MonoBehaviour
         
         // MeshGenerator meshGen = GetComponent<MeshGenerator>();
         // meshGen.GenerateMesh(borderedMap,1);
-        
-        CreateVisualMap();
+        List<Coord> wallsAroundRooms = GetCoordinatesWithZeroNeighbor();
+        CreateVisualMap(wallsAroundRooms);
     }
+    
+    List<Coord> GetCoordinatesWithZeroNeighbor()
+    {
+        List<Coord> result = new List<Coord>();
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                // Check if the current tile is zero
+                if (map[x, y] == 0)
+                {
+                    // Check the neighbors of the current tile
+                    bool hasNonZeroNeighbor = false;
+
+                    // Iterate over the 8 possible neighbors (left, right, up, down, and diagonals)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        for (int dy = -1; dy <= 1; dy++)
+                        {
+                            if (dx == 0 && dy == 0)
+                                continue;
+
+                            int neighborX = x + dx;
+                            int neighborY = y + dy;
+
+                            // Ensure the neighbor is within map bounds
+                            if (IsInMapRange(neighborX, neighborY) && map[neighborX, neighborY] != 0)
+                            {
+                                hasNonZeroNeighbor = true;
+                                break;
+                            }
+                        }
+
+                        if (hasNonZeroNeighbor)
+                            break;
+                    }
+
+                    // If the tile has at least one neighbor with a value of zero, add it to the result list
+                    if (hasNonZeroNeighbor)
+                    {
+                        result.Add(new Coord(x, y));
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     
     
     ////////////////////////////////////////////////  Connect rooms code below ////////////////////////////////////////////////
@@ -651,10 +701,24 @@ public class MapGenerator : MonoBehaviour
             tileX = x;
             tileY = y;
         }
+        
+        public override bool Equals(object obj)
+        {
+            if (obj is Coord other)
+            {
+                return tileX == other.tileX && tileY == other.tileY;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return tileX.GetHashCode() ^ tileY.GetHashCode();
+        }
     }
     
     
-    void CreateVisualMap()
+    void CreateVisualMap(List<Coord> wallsAroundRooms)
     {
         for (int x = 0; x < width; x++)
         {
@@ -663,24 +727,29 @@ public class MapGenerator : MonoBehaviour
                 Vector3 pos = new Vector3(-width / 2 + x + 0.5f, 0, -height / 2 + y + 0.5f);
                 GameObject obj = null;
 
-                if (map[x, y] == 1) // Residential
+                // Check if the current coordinate is in wallsAroundRooms
+                if (wallsAroundRooms.Contains(new Coord(x, y)))
                 {
-                    obj = CreateBuilding(pos, Color.red, "Residential");
+                    CreateBuilding(pos, Color.black,PrimitiveType.Cube,new Vector3(1,7, 1), "Wall");
                 }
-                else if (map[x, y] == 2) // Industrial
+                else
                 {
-                    obj = CreateBuilding(pos, Color.gray, "Industrial");
-                }else if(map[x, y] == -1)
-
-                {
-                    obj = CreateBuilding(pos, Color.magenta, "Connection");
-                }
-                else if (map[x, y] == 0) // Empty
-                {
-                    obj = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                    obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-                    obj.transform.position = pos;
-                    obj.GetComponent<Renderer>().material.color = Color.white;
+                    if (map[x, y] == 1) // Residential
+                    {
+                        obj = CreateBuilding(pos, Color.red,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Residential");
+                    }
+                    else if (map[x, y] == 2) // Industrial
+                    {
+                        obj = CreateBuilding(pos, Color.gray,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Industrial");
+                    }
+                    else if (map[x, y] == -1) // Connection
+                    {
+                        obj = CreateBuilding(pos, Color.magenta,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Connection");
+                    }
+                    else if (map[x, y] == 0) // Empty
+                    {
+                        obj = CreateBuilding(pos, Color.white,PrimitiveType.Plane,new Vector3(0.5f,0.2f, 0.5f), "Empty");
+                    }
                 }
 
                 if (obj != null)
@@ -691,11 +760,12 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    GameObject CreateBuilding(Vector3 position, Color color, string tag)
+
+    GameObject CreateBuilding(Vector3 position, Color color, PrimitiveType primitiveType,Vector3 localScale, string tag)
     {
-        GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        GameObject building = GameObject.CreatePrimitive(primitiveType);
         building.transform.position = position;
-        building.transform.localScale = new Vector3(1, UnityEngine.Random.Range(1, 3), 1); // Random height
+        building.transform.localScale = localScale; // Random height
         building.GetComponent<Renderer>().material.color = color;
         building.tag = tag; // Assign tag for differentiation
         return building;
