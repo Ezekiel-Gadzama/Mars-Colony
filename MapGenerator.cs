@@ -10,6 +10,7 @@ public class MapGenerator : MonoBehaviour
 {
     public int width;
     public int height;
+    float[,] heightMap;
     
     public string seed;
     public bool useRandomSeed;
@@ -19,14 +20,7 @@ public class MapGenerator : MonoBehaviour
 
     void Start()
     {
-        GenerateMap();
-    }
-
-    void GenerateMap()
-    {
-        map = new int[width, height];
-        float[,] heightMap = new float[width, height];
-
+        heightMap = new float[width, height];
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -38,10 +32,16 @@ public class MapGenerator : MonoBehaviour
                 heightMap[x, y] = Mathf.PerlinNoise(xCoord, yCoord);
             }
         }
+        GenerateMap();
+    }
+
+    void GenerateMap()
+    {
+        map = new int[width, height];
         RandomFillMap();
         for (int i = 0; i < 1000; i++)
         {
-            SmoothMap(heightMap);
+            SmoothMap();
         }
 
         ProcessMap();
@@ -116,7 +116,7 @@ public class MapGenerator : MonoBehaviour
 
     }
 
-    void ConnectClosestRooms(List<Room> allRooms, bool forceAccessibilityFromMainRoom = false)
+    void ConnectClosestRooms(List<Room> allRooms,bool forceAccessibilityFromMainRoom = false)
     {
         List<Room> roomsListA = new List<Room>();
         List<Room> roomListB = new List<Room>();
@@ -163,13 +163,26 @@ public class MapGenerator : MonoBehaviour
                 {
                     foreach (Coord tileB in roomB.edgeTiles)
                     {
-                        path = AStarPathfinding(tileA, tileB);
+                        // path = AStarPathfinding(tileA, tileB);
+                        path = new List<Coord>
+                        {
+                            new (0, 0),  // Starting point
+                            new (1, 6),
+                            new (2, 5),
+                            new (3, 3),
+                            new (4, 2),
+                            new (5, 6),
+                            new (5, 9),
+                            new (5, 6),
+                            new (6, 5),
+                            new (7, 6),
+                            new (8, 2),
+                            new (9, 2),  // Goal point
+                        };
 
                         if (path != null && path.Count < bestDistance)
                         {
                             bestDistance = path.Count;
-                            bestTileA = tileA;
-                            bestTileB = tileB;
                             bestRoomA = roomA;
                             bestRoomB = roomB;
                             possibleConnectionFound = true;
@@ -180,13 +193,13 @@ public class MapGenerator : MonoBehaviour
 
             if (possibleConnectionFound && !forceAccessibilityFromMainRoom)
             {
-                CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB,path);
+                CreatePassage(bestRoomA, bestRoomB,path);
             }
         }
 
         if (possibleConnectionFound && forceAccessibilityFromMainRoom)
         {
-            CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB,path);
+            CreatePassage(bestRoomA, bestRoomB,path);
             ConnectClosestRooms(allRooms, true);
         }
 
@@ -196,11 +209,137 @@ public class MapGenerator : MonoBehaviour
         }
     }
     
-    void CreatePassage(Room roomA, Room roomB, Coord tileA, Coord tileB,List<Coord> path)
+    
+    List<Coord> AStarPathfinding(Coord start, Coord goal)
+    {
+        // Define the open and closed lists
+        List<Node> openList = new List<Node>();
+        HashSet<Coord> closedList = new HashSet<Coord>();
+
+        // Initialize start node
+        Node startNode = new Node(start, null, 0, GetDistance(start, goal));
+        openList.Add(startNode);
+
+        while (openList.Count > 0)
+        {
+            // Get the node with the lowest fCost (gCost + hCost)
+            Node currentNode = openList[0];
+            foreach (Node node in openList)
+            {
+                if (node.fCost < currentNode.fCost || 
+                   (node.fCost == currentNode.fCost && node.hCost < currentNode.hCost))
+                {
+                    currentNode = node;
+                }
+            }
+
+            openList.Remove(currentNode);
+            closedList.Add(currentNode.coord);
+
+            // If goal is reached
+            if (currentNode.coord.Equals(goal))
+            {
+                return RetracePath(currentNode);
+            }
+
+            // Explore neighbors
+            foreach (Coord neighbor in GetNeighbors(currentNode.coord))
+            {
+                if (closedList.Contains(neighbor) || IsObstacle(neighbor))
+                    continue;
+
+                int tentativeGCost = currentNode.gCost + GetDistance(currentNode.coord, neighbor);
+
+                Node neighborNode = openList.Find(node => node.coord.Equals(neighbor));
+                if (neighborNode == null)
+                {
+                    // Add neighbor to the open list if it's not already there
+                    neighborNode = new Node(neighbor, currentNode, tentativeGCost, GetDistance(neighbor, goal));
+                    openList.Add(neighborNode);
+                }
+                else if (tentativeGCost < neighborNode.gCost)
+                {
+                    // Update gCost and parent if a better path is found
+                    neighborNode.gCost = tentativeGCost;
+                    neighborNode.parent = currentNode;
+                }
+            }
+        }
+
+        // No path found
+        return null;
+    }
+
+    List<Coord> RetracePath(Node endNode)
+    {
+        List<Coord> path = new List<Coord>();
+        Node currentNode = endNode;
+
+        while (currentNode != null)
+        {
+            path.Add(currentNode.coord);
+            currentNode = currentNode.parent;
+        }
+        path.Reverse();
+        return path;
+    }
+
+    bool IsObstacle(Coord coord)
+    {
+        if (coord.tileX < 0 || coord.tileY < 0 || coord.tileX >= width || coord.tileY >= height)
+            return true;
+
+        float heightValue = heightMap[coord.tileX, coord.tileY];
+        return heightValue <= 0.2f || heightValue >= 0.7f;
+    }
+
+    List<Coord> GetNeighbors(Coord coord)
+    {
+        List<Coord> neighbors = new List<Coord>();
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                int nx = coord.tileX + dx;
+                int ny = coord.tileY + dy;
+                neighbors.Add(new Coord(nx, ny));
+            }
+        }
+        return neighbors;
+    }
+
+    int GetDistance(Coord a, Coord b)
+    {
+        int dx = Mathf.Abs(a.tileX - b.tileX);
+        int dy = Mathf.Abs(a.tileY - b.tileY);
+        return dx + dy + (Mathf.Min(dx, dy) * (14 - 2 * 10));
+    }
+
+    class Node
+    {
+        public Coord coord;
+        public Node parent;
+        public int gCost; // Cost from start to this node
+        public int hCost; // Estimated cost from this node to the goal
+        public int fCost => gCost + hCost;
+
+        public Node(Coord coord, Node parent, int gCost, int hCost)
+        {
+            this.coord = coord;
+            this.parent = parent;
+            this.gCost = gCost;
+            this.hCost = hCost;
+        }
+    }
+
+    
+    void CreatePassage(Room roomA, Room roomB,List<Coord> path)
     {
         Room.ConnectRooms(roomA, roomB);
-        Debug.DrawLine(CoordToWorldPoint(tileA), CoordToWorldPoint(tileB), Color.yellow,100);
-        // List<Coord> line = GetLine(tileA, tileB);
+        Debug.Log("path size: " + path.Count);
         foreach (Coord c in path)
         {
             DrawCircle(c,1);
@@ -224,68 +363,6 @@ public class MapGenerator : MonoBehaviour
                 }
             }
         }
-    }
-
-    List<Coord> GetLine(Coord from, Coord to)
-    {
-        List<Coord> line = new List<Coord>();
-        int x = from.tileX;
-        int y = from.tileY;
-
-        int dx = to.tileX - from.tileX;
-        int dy = to.tileY - from.tileY;
-
-        bool inverted = false;
-        int step = Math.Sign (dx);
-        int gradientStep = Math.Sign(dy);
-        int longest = Mathf.Abs(dx);
-        int shortest = Mathf.Abs(dy);
-
-        if (longest < shortest)
-        {
-            inverted = true;
-            longest = Mathf.Abs(dy);
-            shortest = Mathf.Abs(dx);
-
-            step = Math.Sign(dy);
-            gradientStep = Math.Sign(dx);
-        }
-
-        int gradientAccumulation = longest / 2;
-        for (int i = 0; i < longest; i++)
-        {
-            line.Add(new Coord(x,y));
-            if (inverted)
-            {
-                y += step;
-            }
-            else
-            {
-                x += step;
-            }
-
-            gradientAccumulation += shortest;
-            if (gradientAccumulation >= longest)
-            {
-                if (inverted)
-                {
-                    x += gradientStep;
-                }
-                else
-                {
-                    y += gradientStep;
-                }
-
-                gradientAccumulation -= longest;
-            }
-        }
-
-        return line;
-    }
-
-    Vector3 CoordToWorldPoint(Coord tile)
-    {
-        return new Vector3(-width / 2 + 0.5f + tile.tileX, 2, -height / 2 + 0.5f + tile.tileY);
     }
 
     class Room : IComparable<Room>
@@ -467,7 +544,7 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    void SmoothMap(float[,] heightMap)
+    void SmoothMap()
     {
         for (int x = 0; x < width; x++)
         {
