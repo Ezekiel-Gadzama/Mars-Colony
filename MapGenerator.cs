@@ -388,7 +388,7 @@ public class MapGenerator : MonoBehaviour
                     int drawY = c.tileY + y;
                     if (IsInMapRange(drawX, drawY))
                     {
-                        map[drawX, drawY] = 1;
+                        map[drawX, drawY] = -1;
                     }
                 }
             }
@@ -670,6 +670,10 @@ public class MapGenerator : MonoBehaviour
                 else if (map[x, y] == 2) // Industrial
                 {
                     obj = CreateBuilding(pos, Color.gray, "Industrial");
+                }else if(map[x, y] == -1)
+
+                {
+                    obj = CreateBuilding(pos, Color.magenta, "Connection");
                 }
                 else if (map[x, y] == 0) // Empty
                 {
