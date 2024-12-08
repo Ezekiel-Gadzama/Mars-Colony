@@ -62,21 +62,21 @@ public class MapGenerator : MonoBehaviour
     void ProcessMap()
     {
         List<List<Coord>> wallRegions = GetRegions(0);
-        int wallThresholdSize = 30;
+        int wallThresholdSize = 50;
         foreach (List<Coord> wallRegion in wallRegions)
         {
             if (wallRegion.Count < wallThresholdSize)
             {
                 foreach (Coord tile in wallRegion)
                 {
-                    map[tile.tileX, tile.tileY] = 0;
+                    map[tile.tileX, tile.tileY] = map[tile.tileX + 1, tile.tileY];
                 }
             }
         }
         
         List<List<Coord>> roomRegions = GetRegions(1);
         roomRegions.AddRange(GetRegions(2));
-        int roomThresholdSize = 0;
+        int roomThresholdSize = 50;
         List<Room> survivingRooms = new List<Room>();
         foreach (List<Coord> roomRegion in roomRegions)
         {
@@ -84,8 +84,7 @@ public class MapGenerator : MonoBehaviour
             {
                 foreach (Coord tile in roomRegion)
                 {
-                    map[tile.tileX, tile.tileY] =
-                        map[tile.tileX + 1, tile.tileY];
+                    map[tile.tileX, tile.tileY] = 0;
                 }
             }
             else
@@ -97,7 +96,7 @@ public class MapGenerator : MonoBehaviour
         survivingRooms.Sort();
         survivingRooms[0].isMainRoom = true;
         survivingRooms[0].isAccessibleFromMainRoom = true;
-
+        
         Debug.Log("surviving rooms "+survivingRooms.Count);
         ConnectClosestRooms(survivingRooms);
 
@@ -216,7 +215,7 @@ public class MapGenerator : MonoBehaviour
                     int drawY = c.tileY + y;
                     if (IsInMapRange(drawX, drawY))
                     {
-                        map[drawX, drawY] = 0;
+                        map[drawX, drawY] = 1;
                     }
                 }
             }
