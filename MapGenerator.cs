@@ -64,10 +64,10 @@ public class MapGenerator : MonoBehaviour
             }
         }
         
-        MeshGenerator meshGen = GetComponent<MeshGenerator>();
-        meshGen.GenerateMesh(borderedMap,1);
+        // MeshGenerator meshGen = GetComponent<MeshGenerator>();
+        // meshGen.GenerateMesh(borderedMap,1);
         
-        // CreateVisualMap();
+        CreateVisualMap();
     }
     
     
@@ -76,13 +76,15 @@ public class MapGenerator : MonoBehaviour
     {
         List<List<Coord>> wallRegions = GetRegions(0);
         int wallThresholdSize = 50;
+        
         foreach (List<Coord> wallRegion in wallRegions)
         {
             if (wallRegion.Count < wallThresholdSize)
             {
                 foreach (Coord tile in wallRegion)
                 {
-                    map[tile.tileX, tile.tileY] = map[tile.tileX + 1, tile.tileY];
+                    // Check and update the map with the neighboring tile value.
+                    map[tile.tileX, tile.tileY] = GetNeighborTileValue(tile);
                 }
             }
         }
@@ -91,12 +93,14 @@ public class MapGenerator : MonoBehaviour
         roomRegions.AddRange(GetRegions(2));
         int roomThresholdSize = 50;
         List<Room> survivingRooms = new List<Room>();
+
         foreach (List<Coord> roomRegion in roomRegions)
         {
             if (roomRegion.Count < roomThresholdSize)
             {
                 foreach (Coord tile in roomRegion)
                 {
+                    // Check and update the map with the neighboring tile value.
                     map[tile.tileX, tile.tileY] = 0;
                 }
             }
@@ -105,15 +109,40 @@ public class MapGenerator : MonoBehaviour
                 survivingRooms.Add(new Room(roomRegion, map));
             }
         }
-        
+
         survivingRooms.Sort();
         survivingRooms[0].isMainRoom = true;
         survivingRooms[0].isAccessibleFromMainRoom = true;
-        
-        Debug.Log("surviving rooms "+survivingRooms.Count);
+
+        Debug.Log("surviving rooms " + survivingRooms.Count);
         ConnectClosestRooms(survivingRooms);
+    }
 
-
+    int GetNeighborTileValue(Coord tile)
+    {
+        // Check if the right neighbor is within range
+        if (IsInMapRange(tile.tileX + 1, tile.tileY)) 
+        {
+            return map[tile.tileX + 1, tile.tileY];
+        }
+        // If not, check the left neighbor
+        else if (IsInMapRange(tile.tileX - 1, tile.tileY)) 
+        {
+            return map[tile.tileX - 1, tile.tileY];
+        }
+        // If not, check the bottom neighbor
+        else if (IsInMapRange(tile.tileX, tile.tileY + 1)) 
+        {
+            return map[tile.tileX, tile.tileY + 1];
+        }
+        // If not, check the top neighbor
+        else if (IsInMapRange(tile.tileX, tile.tileY - 1)) 
+        {
+            return map[tile.tileX, tile.tileY - 1];
+        }
+        
+        // Return default color if no valid neighbor is found
+        return map[tile.tileX, tile.tileY];
     }
 
     void ConnectClosestRooms(List<Room> allRooms,bool forceAccessibilityFromMainRoom = false)
@@ -208,6 +237,7 @@ public class MapGenerator : MonoBehaviour
             ConnectClosestRooms(allRooms, true);
         }
     }
+    
     
     
     List<Coord> AStarPathfinding(Coord start, Coord goal)
@@ -525,19 +555,22 @@ public class MapGenerator : MonoBehaviour
                 }
                 else
                 {
-                    // Assign zones randomly with weights
-                    int randomValue = pseudoRandom.Next(0, 100);
-                    if (randomValue < randomFillPercent)
+                    if (heightMap[x, y] > 0.2 && heightMap[x, y] < 0.7)
                     {
-                        map[x, y] = 1; // Residential
-                    }
-                    else if (randomValue < randomFillPercent + 15) // 15% for industrial
-                    {
-                        map[x, y] = 2; // Industrial
-                    }
-                    else
-                    {
-                        map[x, y] = 0; // white spaces
+                        // Assign zones randomly with weights
+                        int randomValue = pseudoRandom.Next(0, 100);
+                        if (randomValue < randomFillPercent)
+                        {
+                            map[x, y] = 2; // Industrial
+                        }
+                        else if (randomValue < (randomFillPercent * 3) - (int)(randomFillPercent / 1.3)) // 15% for industrial
+                        {
+                            map[x, y] = 1; // Residential
+                        }
+                        else
+                        {
+                            map[x, y] = 0; // white spaces
+                        }
                     }
                 }
             }
@@ -566,7 +599,7 @@ public class MapGenerator : MonoBehaviour
                     float emptyRatio = (float)emptyCount / totalNeighbors;
                     if (residentialRatio + industrialRatio > emptyRatio)
                     {
-                        if (heightMap[x, y] > 0.3 && heightMap[x, y] < 0.7)
+                        if (heightMap[x, y] > 0.2 && heightMap[x, y] < 0.7)
                         {
                             // Assign type based on dominant proportion
                             if (residentialRatio > industrialRatio)
@@ -583,17 +616,6 @@ public class MapGenerator : MonoBehaviour
             }
         }
         
-        // Remove areas not suitable for buildings
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (heightMap[x, y] <= 0.2 && heightMap[x, y] >= 0.7)
-                {
-                    map[x, y] = 0;
-                }
-            }
-        }
     }
     
     
