@@ -717,7 +717,6 @@ public class MapGenerator : MonoBehaviour
         }
     }
     
-    
     void CreateVisualMap(List<Coord> wallsAroundRooms)
     {
         for (int x = 0; x < width; x++)
@@ -730,25 +729,25 @@ public class MapGenerator : MonoBehaviour
                 // Check if the current coordinate is in wallsAroundRooms
                 if (wallsAroundRooms.Contains(new Coord(x, y)))
                 {
-                    CreateBuilding(pos, Color.black,PrimitiveType.Cube,new Vector3(1,7, 1), "Wall");
+                    obj = CreateBuilding(pos, Color.black, PrimitiveType.Cube, new Vector3(1, 7, 1), "Wall");
                 }
                 else
                 {
                     if (map[x, y] == 1) // Residential
                     {
-                        obj = CreateBuilding(pos, Color.red,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Residential");
+                        obj = CreateBuilding(pos, Color.red, PrimitiveType.Cube, new Vector3(1, UnityEngine.Random.Range(1, 3), 1), "Residential");
                     }
                     else if (map[x, y] == 2) // Industrial
                     {
-                        obj = CreateBuilding(pos, Color.gray,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Industrial");
+                        obj = CreateBuilding(pos, Color.gray, PrimitiveType.Cube, new Vector3(1, UnityEngine.Random.Range(1, 3), 1), "Industrial");
                     }
                     else if (map[x, y] == -1) // Connection
                     {
-                        obj = CreateBuilding(pos, Color.magenta,PrimitiveType.Cube,new Vector3(1,UnityEngine.Random.Range(1, 3), 1), "Connection");
+                        obj = CreateBuilding(pos, Color.magenta, PrimitiveType.Cube, new Vector3(1, UnityEngine.Random.Range(1, 3), 1), "Connection");
                     }
                     else if (map[x, y] == 0) // Empty
                     {
-                        obj = CreateBuilding(pos, Color.white,PrimitiveType.Plane,new Vector3(0.5f,0.2f, 0.5f), "Empty");
+                        obj = CreateBuilding(pos, Color.white, PrimitiveType.Plane, new Vector3(0.5f, 0.2f, 0.5f), "Empty");
                     }
                 }
 
@@ -760,16 +759,17 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-
-    GameObject CreateBuilding(Vector3 position, Color color, PrimitiveType primitiveType,Vector3 localScale, string tag)
+    GameObject CreateBuilding(Vector3 position, Color color, PrimitiveType primitiveType, Vector3 localScale, string tag)
     {
         GameObject building = GameObject.CreatePrimitive(primitiveType);
         building.transform.position = position;
-        building.transform.localScale = localScale; // Random height
+        building.transform.localScale = localScale; // Set scale
         building.GetComponent<Renderer>().material.color = color;
         building.tag = tag; // Assign tag for differentiation
+
         return building;
     }
+
 
 }
 
