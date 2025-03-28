@@ -39,6 +39,7 @@ public string seed = "mars123";   // Fixed seed
 
 
 ⚙️ Configuration
+Map Parameters
 Parameter	Description	Recommended Range
 width	Map width in tiles	50-500
 height	Map height in tiles	50-500
@@ -46,41 +47,96 @@ randomFillPercent	Initial fill percentage	30-70
 useRandomSeed	Randomize seed	true/false
 seed	Manual seed value	Any string
 
-
 🧠 Technical Details
-Key Algorithms
-Perlin Noise Generation
-
-Cellular Automata Smoothing
-
-A Pathfinding*
-
-Room Processing & Connection
-
-
-
-Data Structures
+Core Algorithms
+1. Perlin Noise Generation
 csharp
 Copy
-struct Coord { int tileX, tileY; }  // Tile coordinates
-class Room { ... }                 // Connected regions
-class Node { ... }                 // A* pathfinding nodes
+heightMap[x, y] = Mathf.PerlinNoise(xCoord, yCoord);
+2. Cellular Automata Smoothing
+csharp
+Copy
+void SmoothMap() { ... }
+3. A* Pathfinding
+csharp
+Copy
+List<Coord> AStarPathfinding(Coord start, Coord goal) { ... }
+4. Room Processing
+csharp
+Copy
+void ProcessMap() { ... }
+Data Structures
+Coord
+csharp
+Copy
+public struct Coord {
+    public int tileX;
+    public int tileY;
+}
+Room
+
+
+csharp
+public class Room : IComparable<Room> {
+    public List<Coord> tiles;
+    public List<Coord> edgeTiles;
+    // ... other members
+}
+
 🖼️ Example Output
-Generated Layout
-Legend: Blue=Residential, Red=Industrial, White=Empty, Purple=Paths
+Generated Colony Layout
+
+Zone Legend:
+
+🔵 Blue: Residential areas
+
+🔴 Red: Industrial zones
+
+⚪ White: Empty space
+
+🟣 Purple: Connecting pathways
 
 🛠 Customization
-Edit RandomFillMap() for initial distribution
+Modifying Zone Distribution
+Edit in RandomFillMap():
 
-Adjust SmoothMap() for automata behavior
+csharp
+if (randomValue < randomFillPercent) {
+    map[x, y] = 2; // Industrial
+}
+else if (randomValue < threshold) {
+    map[x, y] = 1; // Residential
+}
+Adjusting Pathfinding
+Modify IsObstacle():
 
-Modify IsObstacle() for terrain constraints
+csharp
+Copy
+bool IsObstacle(Coord coord) {
+    return heightMap[coord.tileX, coord.tileY] <= 0.2f 
+        || heightMap[coord.tileX, coord.tileY] >= 0.7f;
+}
+
 
 🚨 Troubleshooting
+Common Issues
 Issue	Solution
-Paths not connecting	Adjust IsObstacle criteria
-Too many small rooms	Increase roomThresholdSize
+Paths not generating	Adjust IsObstacle() criteria
+Performance issues	Reduce smoothing iterations
+Disconnected rooms	Increase roomThresholdSize
+
 📜 License
 MIT License - Free for personal and commercial use
+
+🤝 Contributing
+Fork the repository
+
+Create your feature branch (git checkout -b feature/feature-name)
+
+Commit your changes (git commit -m 'Add some feature')
+
+Push to the branch (git push origin feature/feature-name)
+
+Open a Pull Request
 
 
